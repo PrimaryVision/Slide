@@ -14,6 +14,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -254,6 +255,10 @@ public class AlbumPager extends BaseSaveActivity {
 
                             if (SettingValues.oldSwipeMode) {
                                 startPage = 1;
+                                // Set an opaque background for the ViewPager
+                                TypedValue typedValue = new TypedValue();
+                                getTheme().resolveAttribute(R.attr.card_background, typedValue, true);
+                                p.setBackgroundColor(typedValue.data);
                             }
 
                             p.setCurrentItem(startPage);

@@ -1,46 +1,85 @@
 package me.edgan.redditslide.SubmissionViews;
 
+import static me.edgan.redditslide.Notifications.ImageDownloadNotificationService.EXTRA_SUBMISSION_TITLE;
+import static me.edgan.redditslide.util.SubmissionBottomSheetActions.hideSubmission;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Bundle;
+import android.text.InputType;
+import android.text.SpannableStringBuilder;
+import android.text.style.AbsoluteSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.cocosw.bottomsheet.BottomSheet;
 import com.devspark.robototextview.RobotoTypefaces;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.android.material.snackbar.Snackbar;
 
 import me.edgan.redditslide.ActionStates;
+import me.edgan.redditslide.Activities.Album;
+import me.edgan.redditslide.Activities.AlbumPager;
+import me.edgan.redditslide.Activities.FullscreenVideo;
+import me.edgan.redditslide.Activities.GalleryImage;
 import me.edgan.redditslide.Activities.MainActivity;
+import me.edgan.redditslide.Activities.MediaView;
+import me.edgan.redditslide.Activities.ModQueue;
+import me.edgan.redditslide.Activities.MultiredditOverview;
+import me.edgan.redditslide.Activities.PostReadLater;
+import me.edgan.redditslide.Activities.Profile;
+import me.edgan.redditslide.Activities.Reauthenticate;
+import me.edgan.redditslide.Activities.RedditGallery;
+import me.edgan.redditslide.Activities.RedditGalleryPager;
+import me.edgan.redditslide.Activities.Search;
+import me.edgan.redditslide.Activities.SubredditView;
+import me.edgan.redditslide.Activities.Tumblr;
+import me.edgan.redditslide.Activities.TumblrPager;
 import me.edgan.redditslide.Adapters.CommentAdapter;
 import me.edgan.redditslide.Adapters.SubmissionViewHolder;
 import me.edgan.redditslide.Authentication;
+import me.edgan.redditslide.CommentCacheAsync;
 import me.edgan.redditslide.ContentType;
+import me.edgan.redditslide.DataShare;
+import me.edgan.redditslide.ForceTouch.PeekViewActivity;
 import me.edgan.redditslide.HasSeen;
+import me.edgan.redditslide.Hidden;
 import me.edgan.redditslide.LastComments;
+import me.edgan.redditslide.OfflineSubreddit;
 import me.edgan.redditslide.OpenRedditLink;
+import me.edgan.redditslide.PostMatch;
 import me.edgan.redditslide.R;
 import me.edgan.redditslide.Reddit;
 import me.edgan.redditslide.SettingValues;
 import me.edgan.redditslide.SubmissionCache;
+import me.edgan.redditslide.Toolbox.ToolboxUI;
 import me.edgan.redditslide.UserSubscriptions;
 import me.edgan.redditslide.Views.CreateCardView;
 import me.edgan.redditslide.Views.DoEditorActions;
@@ -49,8 +88,14 @@ import me.edgan.redditslide.Visuals.Palette;
 import me.edgan.redditslide.Vote;
 import me.edgan.redditslide.util.AnimatorUtil;
 import me.edgan.redditslide.util.BlendModeUtil;
+import me.edgan.redditslide.util.ClipboardUtil;
 import me.edgan.redditslide.util.CompatUtil;
+import me.edgan.redditslide.util.DisplayUtil;
+import me.edgan.redditslide.util.GifUtils;
+import me.edgan.redditslide.util.JsonUtil;
 import me.edgan.redditslide.util.LayoutUtils;
+import me.edgan.redditslide.util.LinkUtil;
+import me.edgan.redditslide.util.NetworkUtil;
 import me.edgan.redditslide.util.OnSingleClickListener;
 import me.edgan.redditslide.util.SubmissionBottomSheetActions;
 import me.edgan.redditslide.util.SubmissionModActions;
@@ -59,17 +104,24 @@ import me.edgan.redditslide.util.SubmissionParser;
 import net.dean.jraw.ApiException;
 import net.dean.jraw.fluent.FlairReference;
 import net.dean.jraw.fluent.FluentRedditClient;
+import net.dean.jraw.http.NetworkException;
+import net.dean.jraw.http.oauth.InvalidScopeException;
 import net.dean.jraw.managers.AccountManager;
 import net.dean.jraw.managers.ModerationManager;
 import net.dean.jraw.models.Contribution;
+import net.dean.jraw.models.DistinguishedStatus;
 import net.dean.jraw.models.FlairTemplate;
+import net.dean.jraw.models.Ruleset;
 import net.dean.jraw.models.Submission;
+import net.dean.jraw.models.SubredditRule;
+import net.dean.jraw.models.Thing;
 import net.dean.jraw.models.VoteDirection;
 
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1114,7 +1166,7 @@ public class PopulateSubmissionViewHolder {
                                                                                     .getText()
                                                                                     .toString();
                                                                 }
-                                                                new AsyncReportTask(
+                                                                new SubmissionBottomSheetActions.AsyncReportTask(
                                                                                 submission,
                                                                                 holder.itemView)
                                                                         .executeOnExecutor(
@@ -1380,9 +1432,18 @@ public class PopulateSubmissionViewHolder {
     private void categorizeSaved(
             final Submission submission, View itemView, final Context mContext) {
         new AsyncTask<Void, Void, List<String>>() {
+            @Override
+            protected List<String> doInBackground(Void... voids) {
+                // TODO: implement categorizeSaved logic
+                return null;
+            }
 
-
-
+            @Override
+            protected void onPostExecute(List<String> result) {
+                // TODO: handle result
+            }
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
 
     public <T extends Contribution> void populateSubmissionViewHolder(
             final SubmissionViewHolder holder,
@@ -2387,8 +2448,7 @@ public class PopulateSubmissionViewHolder {
                                                                                                 FlairTemplate
                                                                                                         t =
                                                                                                                 flairlist
-                                                                                                                        .get(
-                                                                                                                                which);
+                                                                                                                        .get(which);
                                                                                                 if (t
                                                                                                         .isTextEditable()) {
                                                                                                     new MaterialDialog

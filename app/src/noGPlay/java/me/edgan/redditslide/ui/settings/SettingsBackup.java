@@ -20,6 +20,7 @@ import me.edgan.redditslide.Activities.BaseActivityAnim;
 import me.edgan.redditslide.R;
 import me.edgan.redditslide.util.LayoutUtils;
 import me.edgan.redditslide.util.StorageUtil;
+import me.edgan.redditslide.SettingValues;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

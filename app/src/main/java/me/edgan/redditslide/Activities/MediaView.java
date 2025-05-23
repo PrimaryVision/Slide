@@ -642,7 +642,7 @@ public class MediaView extends BaseSaveActivity {
         if (gifUrl.toLowerCase().endsWith(".gif")) {
             // Handle direct .gif URLs with Movie/GifDrawable
             Log.v(TAG, "Loading direct GIF: " + gifUrl); // Changed to Log.v
-            findViewById(R.id.gifarea).setVisibility(View.VISIBLE); // Ensure gifarea is visible for progress bar
+            findViewById(R.id.gifarea).setVisibility(View.VISIBLE);
             findViewById(R.id.submission_image).setVisibility(View.GONE);
             if (videoView != null) videoView.setVisibility(View.GONE); // Hide ExoVideoView
             directGifViewer.setVisibility(View.VISIBLE); // Show our ImageView
@@ -726,14 +726,9 @@ public class MediaView extends BaseSaveActivity {
             videoView.clearFocus();
             findViewById(R.id.gifarea).setVisibility(View.VISIBLE);
             findViewById(R.id.submission_image).setVisibility(View.GONE);
-            loader.setVisibility(View.VISIBLE); // Progress bar for AsyncLoadGif
-            findViewById(R.id.progress).setVisibility(View.GONE); // Main progress bar for images
-
-            // Ensure this.gif (AsyncLoadGif) is not mixed up with activeGifDrawable (GifDrawable)
-            if (this.gif != null) { // Cancel previous AsyncLoadGif if any
-                this.gif.cancel(true);
-            }
-            this.gif = // Assign to the class field 'gif'
+            // REMOVE THIS LINE: final ProgressBar loader = (ProgressBar) findViewById(R.id.gifprogress);
+            findViewById(R.id.progress).setVisibility(View.GONE);
+            gif =
                     new GifUtils.AsyncLoadGif(
                             this,
                             videoView,
@@ -770,7 +765,6 @@ public class MediaView extends BaseSaveActivity {
         videoView.clearFocus();
         findViewById(R.id.gifarea).setVisibility(View.VISIBLE);
         findViewById(R.id.submission_image).setVisibility(View.GONE);
-        final ProgressBar loader = (ProgressBar) findViewById(R.id.gifprogress);
         findViewById(R.id.progress).setVisibility(View.GONE);
         gif =
                 new GifUtils.AsyncLoadGif(

@@ -584,6 +584,25 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
         }
 
         hideOnLongClick();
+
+        findViewById(R.id.black).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                float simulatedTapY = screenHeight * 0.5f;
+
+                MotionEvent motionEvent = MotionEvent.obtain(
+                        SystemClock.uptimeMillis(),
+                        SystemClock.uptimeMillis() + 100,
+                        MotionEvent.ACTION_UP,
+                        0,
+                        simulatedTapY,
+                        0
+                );
+                onSingleTap(motionEvent);
+                motionEvent.recycle();
+            }
+        });
     }
 
     public void doLoad(final String contentUrl) {
@@ -666,6 +685,26 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                             activeGifDrawable.start();
                             didLoadGif = true; // Mark that a GIF was successfully loaded this way
                             fileLoc = gifFile.getAbsolutePath(); // Potentially for cleanup, though this might need review
+
+                            directGifViewer.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                                    float simulatedTapY = screenHeight * 0.8f;
+
+                                    MotionEvent motionEvent = MotionEvent.obtain(
+                                            SystemClock.uptimeMillis(),
+                                            SystemClock.uptimeMillis() + 100,
+                                            MotionEvent.ACTION_UP,
+                                            0,
+                                            simulatedTapY,
+                                            0
+                                    );
+                                    onSingleTap(motionEvent);
+                                    motionEvent.recycle();
+                                }
+                            });
+
                         } else {
                             Log.e(TAG, "Failed to decode direct GIF: " + gifUrl);
                             Toast.makeText(MediaView.this, "Failed to load GIF.", Toast.LENGTH_SHORT).show();
@@ -1037,6 +1076,25 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                 (findViewById(R.id.progress)).setVisibility(View.GONE);
                 handler.removeCallbacks(progressBarDelayRunner);
 
+                i.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                        float simulatedTapY = screenHeight * 0.8f;
+
+                        MotionEvent motionEvent = MotionEvent.obtain(
+                                SystemClock.uptimeMillis(),
+                                SystemClock.uptimeMillis() + 100,
+                                MotionEvent.ACTION_UP,
+                                0,
+                                simulatedTapY,
+                                0
+                        );
+                        onSingleTap(motionEvent);
+                        motionEvent.recycle();
+                    }
+                });
+
                 previous = i.scale;
                 final float base = i.scale;
                 i.postDelayed(
@@ -1149,6 +1207,25 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                                         }
                                         (findViewById(R.id.progress)).setVisibility(View.GONE);
                                         handler.removeCallbacks(progressBarDelayRunner);
+
+                                        i.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                                                float simulatedTapY = screenHeight * 0.8f;
+
+                                                MotionEvent motionEvent = MotionEvent.obtain(
+                                                        SystemClock.uptimeMillis(),
+                                                        SystemClock.uptimeMillis() + 100,
+                                                        MotionEvent.ACTION_UP,
+                                                        0,
+                                                        simulatedTapY,
+                                                        0
+                                                );
+                                                onSingleTap(motionEvent);
+                                                motionEvent.recycle();
+                                            }
+                                        });
 
                                         previous = i.scale;
                                         final float base = i.scale;

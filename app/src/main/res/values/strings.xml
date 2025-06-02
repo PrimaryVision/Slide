@@ -297,7 +297,7 @@
     <!-- Content types -->
     <string name="type_nsfw_img">NSFW image</string>
     <string name="type_nsfw_gif">NSFW GIF</string>
-    <string name="type_reddit">Reddit link</string>
+    <string name="type_reddit">Reddit</string>
     <string name="type_link">Link</string>
     <string name="type_nsfw_link">NSFW link</string>
     <string name="type_gif">GIF</string>

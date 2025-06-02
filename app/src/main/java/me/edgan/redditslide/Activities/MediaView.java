@@ -701,6 +701,8 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                                             0
                                     );
                                     onSingleTap(motionEvent);
+                                    directGifViewer.requestLayout();
+                                    directGifViewer.invalidate();
                                     motionEvent.recycle();
                                 }
                             });
@@ -1091,6 +1093,8 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                                 0
                         );
                         onSingleTap(motionEvent);
+                        i.requestLayout();
+                        i.invalidate();
                         motionEvent.recycle();
                     }
                 });

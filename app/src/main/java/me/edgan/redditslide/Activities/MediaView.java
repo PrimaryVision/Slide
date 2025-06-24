@@ -110,6 +110,8 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
     public boolean imageShown;
     public String actuallyLoaded;
     public boolean isGif;
+    private int currentRotation = 0; // Track current rotation in degrees
+    private int currentGifRotation = 0; // Track current rotation for direct GIFs
 
     private NotificationManager mNotifyManager;
     private NotificationCompat.Builder mBuilder;
@@ -583,6 +585,36 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
             findViewById(R.id.save).setVisibility(View.INVISIBLE);
         }
 
+        findViewById(R.id.rotate)
+                .setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                if (videoView != null && videoView.getVisibility() == View.VISIBLE) {
+                                    videoView.rotateRight();
+                                } else if (directGifViewer != null && directGifViewer.getVisibility() == View.VISIBLE) {
+                                    rotateDirectGifRight();
+                                } else {
+                                    rotateImage();
+                                }
+                            }
+                        });
+
+        findViewById(R.id.rotate_left)
+                .setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                if (videoView != null && videoView.getVisibility() == View.VISIBLE) {
+                                    videoView.rotateLeft();
+                                } else if (directGifViewer != null && directGifViewer.getVisibility() == View.VISIBLE) {
+                                    rotateDirectGifLeft();
+                                } else {
+                                    rotateImageLeft();
+                                }
+                            }
+                        });
+
         hideOnLongClick();
 
         findViewById(R.id.black).setOnClickListener(new View.OnClickListener() {
@@ -603,6 +635,9 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                 motionEvent.recycle();
             }
         });
+
+        // Adjust button sizes for small screens
+        MiscUtil.adjustButtonSizesForSmallScreens(null, this);
     }
 
     public void doLoad(final String contentUrl) {
@@ -637,10 +672,13 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
 
     public void doLoadGif(final String dat) {
         isGif = true;
+        // Show rotate buttons for videos/GIFs
+        findViewById(R.id.rotate).setVisibility(View.VISIBLE);
+        findViewById(R.id.rotate_left).setVisibility(View.VISIBLE);
         final ProgressBar loader = (ProgressBar) findViewById(R.id.gifprogress);
         final String gifUrl = GifUtils.AsyncLoadGif.formatUrl(dat); // Corrected static call
 
-        if (gifUrl.toLowerCase().endsWith(".gif")) {
+                if (gifUrl.toLowerCase().endsWith(".gif")) {
             // Handle direct .gif URLs with Movie/GifDrawable
             Log.v(TAG, "Loading direct GIF: " + gifUrl); // Changed to Log.v
             findViewById(R.id.gifarea).setVisibility(View.VISIBLE); // Ensure gifarea is visible for progress bar
@@ -656,6 +694,10 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                 activeGifDrawable.stop();
             }
             directGifViewer.setImageDrawable(null);
+
+            // Reset rotation for new GIF
+            currentGifRotation = 0;
+            directGifViewer.setRotation(0f);
 
             GifUtils.downloadGif(gifUrl, new GifUtils.GifDownloadCallback() {
                 @Override
@@ -736,6 +778,17 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
             videoView.setVisibility(View.VISIBLE); // Ensure ExoVideoView is visible
             videoView.setOnSingleTapListener(this); // Set the single tap listener
 
+            findViewById(R.id.black)
+                    .setOnClickListener(
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    if (findViewById(R.id.gifheader).getVisibility() == View.GONE) {
+                                        AnimatorUtil.animateIn(findViewById(R.id.gifheader), 56);
+                                        AnimatorUtil.fadeOut(findViewById(R.id.black));
+                                    }
+                                }
+                            });
             videoView.clearFocus();
             findViewById(R.id.gifarea).setVisibility(View.VISIBLE);
             findViewById(R.id.submission_image).setVisibility(View.GONE);
@@ -958,7 +1011,12 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
         if (contentUrl != null && ContentType.isImgurLink(contentUrl)) {
             contentUrl = contentUrl + ".png";
         }
-        findViewById(R.id.gifprogress).setVisibility(View.GONE);
+                findViewById(R.id.gifprogress).setVisibility(View.GONE);
+
+        // Show rotate buttons for images and position them correctly
+        findViewById(R.id.rotate).setVisibility(View.VISIBLE);
+        findViewById(R.id.rotate_left).setVisibility(View.VISIBLE);
+        updateRotateButtonPositions(false);
 
         if (contentUrl != null && contentUrl.contains("m.imgur.com")) {
             contentUrl = contentUrl.replace("m.imgur.com", "i.imgur.com");
@@ -1035,6 +1093,8 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
         final String url = StringEscapeUtils.unescapeHtml4(urlB);
 
         if (!imageShown) {
+            // Reset rotation when loading a new image
+            currentRotation = 0;
             actuallyLoaded = url;
             final SubsamplingScaleImageView i =
                     (SubsamplingScaleImageView) findViewById(R.id.submission_image);
@@ -1106,60 +1166,19 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                             @Override
                             public void run() {
                                 i.setOnStateChangedListener(
-                                        new SubsamplingScaleImageView
-                                                .DefaultOnStateChangedListener() {
-                                            @Override
-                                            public void onScaleChanged(float newScale, int origin) {
-                                                if (newScale > previous
-                                                        && !hidden
-                                                        && newScale > base) {
-                                                    hidden = true;
-                                                    final View base = findViewById(R.id.gifheader);
-
-                                                    ValueAnimator va =
-                                                            ValueAnimator.ofFloat(1.0f, 0.2f);
-                                                    int mDuration = 250; // in millis
-                                                    va.setDuration(mDuration);
-                                                    va.addUpdateListener(
-                                                            new ValueAnimator
-                                                                    .AnimatorUpdateListener() {
-                                                                public void onAnimationUpdate(
-                                                                        ValueAnimator animation) {
-                                                                    Float value =
-                                                                            (Float)
-                                                                                    animation
-                                                                                            .getAnimatedValue();
-                                                                    base.setAlpha(value);
-                                                                }
-                                                            });
-                                                    va.start();
-                                                    // hide
-                                                } else if (newScale <= previous && hidden) {
-                                                    hidden = false;
-                                                    final View base = findViewById(R.id.gifheader);
-
-                                                    ValueAnimator va =
-                                                            ValueAnimator.ofFloat(0.2f, 1.0f);
-                                                    int mDuration = 250; // in millis
-                                                    va.setDuration(mDuration);
-                                                    va.addUpdateListener(
-                                                            new ValueAnimator
-                                                                    .AnimatorUpdateListener() {
-                                                                public void onAnimationUpdate(
-                                                                        ValueAnimator animation) {
-                                                                    Float value =
-                                                                            (Float)
-                                                                                    animation
-                                                                                            .getAnimatedValue();
-                                                                    base.setAlpha(value);
-                                                                }
-                                                            });
-                                                    va.start();
-                                                    // unhide
-                                                }
-                                                previous = newScale;
+                                    new SubsamplingScaleImageView.DefaultOnStateChangedListener() {
+                                        @Override
+                                        public void onScaleChanged(float newScale, int origin) {
+                                            if (newScale > previous && !hidden && newScale > base) {
+                                                hidden = true;
+                                                animateGifHeaderAlpha(false);
+                                            } else if (newScale <= previous && hidden) {
+                                                hidden = false;
+                                                animateGifHeaderAlpha(true);
                                             }
-                                        });
+                                            previous = newScale;
+                                        }
+                                    });
                             }
                         },
                         2000);
@@ -1243,56 +1262,10 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
                                                                 && !hidden
                                                                 && newScale > base) {
                                                             hidden = true;
-                                                            final View base =
-                                                                    findViewById(R.id.gifheader);
-
-                                                            ValueAnimator va =
-                                                                    ValueAnimator.ofFloat(
-                                                                            1.0f, 0.2f);
-                                                            int mDuration = 250; // in millis
-                                                            va.setDuration(mDuration);
-                                                            va.addUpdateListener(
-                                                                    new ValueAnimator
-                                                                            .AnimatorUpdateListener() {
-                                                                        public void
-                                                                                onAnimationUpdate(
-                                                                                        ValueAnimator
-                                                                                                animation) {
-                                                                            Float value =
-                                                                                    (Float)
-                                                                                            animation
-                                                                                                    .getAnimatedValue();
-                                                                            base.setAlpha(value);
-                                                                        }
-                                                                    });
-                                                            va.start();
-                                                            // hide
+                                                            animateGifHeaderAlpha(false);
                                                         } else if (newScale <= previous && hidden) {
                                                             hidden = false;
-                                                            final View base =
-                                                                    findViewById(R.id.gifheader);
-
-                                                            ValueAnimator va =
-                                                                    ValueAnimator.ofFloat(
-                                                                            0.2f, 1.0f);
-                                                            int mDuration = 250; // in millis
-                                                            va.setDuration(mDuration);
-                                                            va.addUpdateListener(
-                                                                    new ValueAnimator
-                                                                            .AnimatorUpdateListener() {
-                                                                        public void
-                                                                                onAnimationUpdate(
-                                                                                        ValueAnimator
-                                                                                                animation) {
-                                                                            Float value =
-                                                                                    (Float)
-                                                                                            animation
-                                                                                                    .getAnimatedValue();
-                                                                            base.setAlpha(value);
-                                                                        }
-                                                                    });
-                                                            va.start();
-                                                            // unhide
+                                                            animateGifHeaderAlpha(true);
                                                         }
                                                         previous = newScale;
                                                     }
@@ -1324,41 +1297,6 @@ public class MediaView extends BaseSaveActivity implements ExoVideoView.OnSingle
 
     private void showErrorDialog() {
         runOnUiThread(() -> DialogUtil.showErrorDialog(MediaView.this));
-    }
-
-    @Override
-    public boolean onSingleTap(MotionEvent event) {
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        float tapY = event.getRawY();
-
-        View gifHeader = findViewById(R.id.gifheader);
-
-        int thresholdY;
-        if (gifHeader != null && gifHeader.getVisibility() == View.VISIBLE) {
-            int[] location = new int[2];
-            gifHeader.getLocationOnScreen(location);
-            thresholdY = location[1];
-        } else {
-            thresholdY = (int) (screenHeight * 0.75);
-        }
-
-        if (tapY >= thresholdY) {
-            View blackOverlay = findViewById(R.id.black);
-
-            if (gifHeader != null && blackOverlay != null) {
-                if (gifHeader.getVisibility() == View.GONE) {
-                    AnimatorUtil.animateIn(gifHeader, 56);
-                    AnimatorUtil.fadeOut(blackOverlay);
-                    getWindow().getDecorView().setSystemUiVisibility(0);
-                } else {
-                    AnimatorUtil.animateOut(gifHeader);
-                    AnimatorUtil.fadeIn(blackOverlay);
-                    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
-                }
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
